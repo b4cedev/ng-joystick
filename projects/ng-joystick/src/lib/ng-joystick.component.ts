@@ -140,8 +140,8 @@ export class NgJoystickComponent implements OnInit, AfterViewInit, OnDestroy {
         tap(() => this.joystickActivated()),
         switchMap(() => this.moveUntilJoystickReleased()),
         map(event => this.buildJoystickEvent(event)),
-        filter(event => event.direction),
         tap(joystickEvent => this.showJoystickHandleInNewPosition(joystickEvent.clampedPos)),
+        filter(event => event.direction),
         // 'publishReplay' and 'refCount' ensure that there is only one subscription running
         // which means that `setHandlePosition` is run only once independently on how many clients
         // subscribe to this Observable
