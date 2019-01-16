@@ -1,13 +1,13 @@
-import { Component, OnInit, AfterViewInit, Input, ViewChild, ElementRef, Inject, Renderer2, OnDestroy } from '@angular/core';
+import { Component, OnInit, AfterViewInit, Input, ViewChild, ElementRef, Inject, Renderer2, OnDestroy, Output } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { Subscription } from 'rxjs';
 import { fromEvent } from 'rxjs';
 import { map, switchMap, takeUntil, tap, publishReplay, refCount, filter, take, distinctUntilChanged } from 'rxjs/operators';
 import { merge } from 'rxjs';
 
-import {distance, angle, findCoord, radians} from './ng-joystick-utils';
+import { distance, angle, findCoord, radians, normalizedPosition } from './ng-joystick-utils';
 
 export interface JoystickEvent {
     pointerPos: {
@@ -15,6 +15,10 @@ export interface JoystickEvent {
         y: any;
     };
     clampedPos: {
+        x: number;
+        y: number;
+    };
+    normalizedPos: {
         x: number;
         y: number;
     };
@@ -200,6 +204,7 @@ export class NgJoystickComponent implements OnInit, AfterViewInit, OnDestroy {
     } else {
         clampedPos = pointerPos;
     }
+    const normalizedPos = normalizedPosition(this.maxDist, clampedPos, this.startPosition);
 
     const force = dist / this.size;
     const rAngle = radians(180 - eventAngle);
@@ -213,6 +218,7 @@ export class NgJoystickComponent implements OnInit, AfterViewInit, OnDestroy {
     const moveEvent: JoystickEvent = {
         pointerPos,
         clampedPos,
+        normalizedPos,
         force,
         pressure: event.force || event.pressure || event.webkitForce || 0,
         distance: dist,

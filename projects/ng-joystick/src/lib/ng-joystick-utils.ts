@@ -6,6 +6,13 @@ export const distance = (p1: {x: number, y: number}, p2: {x: number, y: number})
     return Math.sqrt((dx * dx) + (dy * dy));
 };
 
+export const normalizedPosition = (maxDistance: number, p1: {x: number, y: number}, p2: {x: number, y: number}): {x: number, y: number} => {
+    const dx = p1.x - p2.x;
+    const dy = p1.y - p2.y;
+
+    return {x: dx / maxDistance, y: dy / maxDistance};
+};
+
 export const angle = (p1: {x: number, y: number}, p2: {x: number, y: number}) => {
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
