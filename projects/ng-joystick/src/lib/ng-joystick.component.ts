@@ -69,15 +69,15 @@ export class NgJoystickComponent implements OnInit, AfterViewInit, OnDestroy {
   private planDirection$: Observable<any>;
 
   // Output APIs
-  joystickStart$: Observable<any>;
-  joystickMove$: Observable<JoystickEvent>;
-  joystickRelease$: Observable<JoystickEvent>;
-  up$: Observable<any>;
-  down$: Observable<any>;
-  right$: Observable<any>;
-  left$: Observable<any>;
-  planDirX$: Observable<any>;
-  planDirY$: Observable<any>;
+  @Output() joystickStart$ = new Subject<any>();
+  @Output() joystickMove$ = new Subject<JoystickEvent>();
+  @Output() joystickRelease$ = new Subject<JoystickEvent>();
+  @Output() up$ = new Subject<any>();
+  @Output() down$ = new Subject<any>();
+  @Output() right$ = new Subject<any>();
+  @Output() left$ = new Subject<any>();
+  @Output() planDirX$ = new Subject<any>();
+  @Output() planDirY$ = new Subject<any>();
 
   constructor(@Inject(DOCUMENT) private document: any, private renderer: Renderer2) { }
 
@@ -90,11 +90,11 @@ export class NgJoystickComponent implements OnInit, AfterViewInit, OnDestroy {
         y: parseInt(this.position.top, 10),
     };
     this.handleNativeElement = this.handleElement.nativeElement;
-    this.joystickStart$ = merge(
+    merge(
         this.buildStream(this.joystickPadElement.nativeElement, 'pointerdown'),
         this.buildStream(this.joystickPadElement.nativeElement, 'mousedown'),
         this.buildStream(this.joystickPadElement.nativeElement, 'touchstart'),
-    );
+    ).subscribe(this.joystickStart$);
     this.end$ = merge(
         this.buildStream(this.document, 'pointerup'),
         this.buildStream(this.document, 'pointercancel'),
@@ -108,21 +108,22 @@ export class NgJoystickComponent implements OnInit, AfterViewInit, OnDestroy {
         this.buildStream(this.document, 'touchmove'),
     );
 
-    this.joystickMove$ = this.buildJoystickMove();
-    this.joystickRelease$ = this.buildJoystickRelease();
+    // this.joystickMove$ = this.buildJoystickMove();
+    this.buildJoystickMove().subscribe(this.joystickMove$);
+    this.buildJoystickRelease().subscribe(this.joystickRelease$);
 
     // we need to subscribe since it is joystickMove$ Observable which controls the position
     // of the joystick on the UI
     this.joystickMoveSubscription = this.joystickMove$.subscribe();
 
-    this.planDirX$ = this.joystickMove$.pipe(map(joystickEvent => joystickEvent.direction.dirX));
-    this.planDirY$ = this.joystickMove$.pipe(map(joystickEvent => joystickEvent.direction.dirY));
+    this.joystickMove$.pipe(map(joystickEvent => joystickEvent.direction.dirX)).subscribe(this.planDirX$);
+    this.joystickMove$.pipe(map(joystickEvent => joystickEvent.direction.dirY)).subscribe(this.planDirY$);
 
     this.planDirection$ = this.joystickMove$.pipe(map(joystickEvent => joystickEvent.direction.planDir));
-    this.up$ = this.planDirection$.pipe(distinctUntilChanged(), filter(d => d === 'up'));
-    this.down$ = this.planDirection$.pipe(distinctUntilChanged(), filter(d => d === 'down'));
-    this.right$ = this.planDirection$.pipe(distinctUntilChanged(), filter(d => d === 'right'));
-    this.left$ = this.planDirection$.pipe(distinctUntilChanged(), filter(d => d === 'left'));
+    this.planDirection$.pipe(distinctUntilChanged(), filter(d => d === 'up')).subscribe(this.up$);
+    this.planDirection$.pipe(distinctUntilChanged(), filter(d => d === 'down')).subscribe(this.down$);
+    this.planDirection$.pipe(distinctUntilChanged(), filter(d => d === 'right')).subscribe(this.right$);
+    this.planDirection$.pipe(distinctUntilChanged(), filter(d => d === 'left')).subscribe(this.left$);
 
   }
 
