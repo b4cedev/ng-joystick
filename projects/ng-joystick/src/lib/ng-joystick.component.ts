@@ -39,28 +39,23 @@ const angle90 = Math.PI / 2;
 @Component({
   selector: 'njk-joystick',
   template: `
-    <div id="zone_joystick">
-      <div class="joystickPad" #joystickPad
-          [style.left]="position.left" [style.top]="position.top">
-          <div class="back"></div>
-          <div class="front" #joystickHandle></div>
-      </div>
+    <div class="joystickPad" #joystickPad>
+        <div class="joystickHandle" #joystickHandle></div>
     </div>
   `,
   styleUrls: ['./ng-joystick.component.css']
 })
 export class NgJoystickComponent implements OnInit, AfterViewInit, OnDestroy {
   // Input APIs
-  @Input() position: {left: string, top: string};
-  @Input() size = 100;
   @Input() threshold = 0.1;
 
+  private size: number;
   private startPosition: {x: number, y: number};
   private maxDist = this.size / 2;
   @ViewChild('joystickPad') private joystickPadElement: ElementRef;
   @ViewChild('joystickHandle') private handleElement: ElementRef;
   private handleNativeElement;
-
+  private handleOffset: number;
   private move$: Observable<any>;
   private end$: Observable<any>;
 
@@ -85,11 +80,12 @@ export class NgJoystickComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit() {
-    this.startPosition = {
-        x: parseInt(this.position.left, 10),
-        y: parseInt(this.position.top, 10),
-    };
     this.handleNativeElement = this.handleElement.nativeElement;
+    this.size = this.joystickPadElement.nativeElement.offsetWidth;
+    this.handleOffset = this.handleNativeElement.offsetWidth / 2;
+    this.maxDist = this.size / 2;
+    // console.log('size', this.size, this.maxDist, this.handleOffset);
+    this.startPosition = this.calculateStartPosition();
     merge(
         this.buildStream(this.joystickPadElement.nativeElement, 'pointerdown'),
         this.buildStream(this.joystickPadElement.nativeElement, 'mousedown'),
@@ -131,6 +127,19 @@ export class NgJoystickComponent implements OnInit, AfterViewInit, OnDestroy {
     this.joystickMoveSubscription.unsubscribe();
   }
 
+  private calculateStartPosition(): {x: number, y: number} {
+    let el = this.joystickPadElement.nativeElement;
+    let x = this.maxDist;
+    let y = this.maxDist;
+    while ( el && !isNaN( el.offsetLeft ) && !isNaN( el.offsetTop ) ) {
+      x += el.offsetLeft - el.scrollLeft;
+      y += el.offsetTop - el.scrollTop;
+      el = el.offsetParent;
+    }
+    // console.log('calculateStartPosition()', x, y);
+    return {x, y};
+  }
+
   private buildStream(element, eventName: string) {
     return fromEvent(element, eventName)
     .pipe(
@@ -170,7 +179,7 @@ export class NgJoystickComponent implements OnInit, AfterViewInit, OnDestroy {
         // we need to take only one notification of end$ and then terminate because
         // joystickRelease$ has to emit only once after the joystick has been activated by clicking on the handle
         switchMap(() => this.end$.pipe(take(1))),
-        map(event => this.buildJoystickEvent(event)),
+        map(event => this.buildJoystickEvent(event, true)),
         // 'publishReplay' and 'refCount' ensure that there is only one subscription running
         // which means that `setHandlePosition` is run only once independently on how many clients
         // subscribe to this Observable
@@ -184,10 +193,10 @@ export class NgJoystickComponent implements OnInit, AfterViewInit, OnDestroy {
     return event.type.match(/^touch/) ? event.changedTouches.item(0) : event;
   }
 
-  private buildJoystickEvent(event) {
+  private buildJoystickEvent(event, release = false) {
     const pointerPos = {
-        x: event.clientX,
-        y: event.clientY
+        x: release ? this.startPosition.x : event.clientX,
+        y: release ? this.startPosition.y : (event.clientY - this.handleOffset)
     };
     let clampedPos: {
         x: number,
@@ -234,8 +243,8 @@ export class NgJoystickComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private showJoystickHandleInNewPosition(clampedPos) {
-    const xPosition = Math.round((clampedPos.x - this.startPosition.x) * 100) / 100 + 'px';
-    const yPosition = Math.round((clampedPos.y - this.startPosition.y) * 100) / 100 + 'px';
+    const xPosition = Math.round((clampedPos.x - this.startPosition.x + this.maxDist - this.handleOffset) * 100) / 100 + 'px';
+    const yPosition = Math.round((clampedPos.y - this.startPosition.y + this.maxDist - this.handleOffset) * 100) / 100 + 'px';
 
     this.renderer.setStyle(this.handleNativeElement, 'left', xPosition);
     this.renderer.setStyle(this.handleNativeElement, 'top', yPosition);
@@ -299,8 +308,8 @@ export class NgJoystickComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private joystickReleased() {
     this.renderer.setStyle(this.handleNativeElement, 'transition', 'top 250ms, left 250ms');
-    this.renderer.setStyle(this.handleNativeElement, 'left', '0px');
-    this.renderer.setStyle(this.handleNativeElement, 'top', '0px');
+    this.renderer.setStyle(this.handleNativeElement, 'left', this.maxDist - this.handleOffset + 'px');
+    this.renderer.setStyle(this.handleNativeElement, 'top', this.maxDist - this.handleOffset + 'px');
   }
 
 }
